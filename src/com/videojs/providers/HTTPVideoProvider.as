@@ -43,6 +43,7 @@ package com.videojs.providers{
         private var _isPaused:Boolean = true;
         private var _isBuffering:Boolean = false;
         private var _isSeeking:Boolean = false;
+	private var _isStreaming:Boolean = false;
         private var _isLive:Boolean = false;
         private var _canSeekAhead:Boolean = false;
         private var _hasEnded:Boolean = false;
@@ -264,11 +265,19 @@ package com.videojs.providers{
             if(_isPlaying){
                 if(duration != 0 && pTime <= duration){
                     _isSeeking = true;
+		    _isStreaming = false;
                     _throughputTimer.stop();
                     if(_isPaused){
                         _pausedSeekValue = pTime;
                     }
-                    _ns.seek(pTime);
+                    if(pTime > buffered ) {
+                        _isStreaming = true;
+			_ns.play(_src.path + '?ms=' + pTime);
+                    }
+                    else {
+			_ns.seek(pTime);
+		    }
+
                     _isBuffering = true;
                 }
             }
@@ -277,6 +286,7 @@ package com.videojs.providers{
                 _isPlaying = true;
                 _hasEnded = false;
                 _isBuffering = true;
+		_isStreaming = false;
             }
         }
         
@@ -289,7 +299,8 @@ package com.videojs.providers{
                 else if(pPercent > 1){
                     _throughputTimer.stop();
                     _ns.seek((pPercent / 100) * _metadata.duration);
-                }
+               
+		}
                 else{
                     _throughputTimer.stop();
                     _ns.seek(pPercent * _metadata.duration);
@@ -391,17 +402,21 @@ package com.videojs.providers{
                     _loadStartTimestamp = getTimer();
                     _throughputTimer.reset();
                     _throughputTimer.start();
-                    _model.broadcastEventExternally(ExternalEventName.ON_LOAD_START);
-                    _model.broadcastEventExternally(ExternalEventName.ON_BUFFER_EMPTY);
-                    if(_pauseOnStart && _loadStarted == false){
+                   
+			_model.broadcastEventExternally(ExternalEventName.ON_LOAD_START);
+                    	_model.broadcastEventExternally(ExternalEventName.ON_BUFFER_EMPTY);
+                    
+		    if(_pauseOnStart && _loadStarted == false){
                         _ns.pause();
                         _isPaused = true;
                     }
                     else{
-                        _model.broadcastEventExternally(ExternalEventName.ON_START);
-                        _model.broadcastEventExternally(ExternalEventName.ON_RESUME);
-                        _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_STREAM_START, {info:e.info}));
-                    }
+                        
+				_model.broadcastEventExternally(ExternalEventName.ON_START);
+                        	_model.broadcastEventExternally(ExternalEventName.ON_RESUME);
+                        	_model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_STREAM_START, {info:e.info}));
+                   	 
+		    }
                     _loadStarted = true;
                     break;
                 
@@ -458,7 +473,7 @@ package com.videojs.providers{
                     break;
                 
             }
-            _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_NETSTREAM_STATUS, {info:e.info}));
+             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_NETSTREAM_STATUS, {info:e.info}));
         }
         
         private function onThroughputTimerTick(e:TimerEvent):void{
@@ -470,22 +485,24 @@ package com.videojs.providers{
             if(pMetaData.duration != undefined){
                 _isLive = false;
                 _canSeekAhead = true;
-                _model.broadcastEventExternally(ExternalEventName.ON_DURATION_CHANGE, _metadata.duration);
+                 _model.broadcastEventExternally(ExternalEventName.ON_DURATION_CHANGE, _metadata.duration);
             }
             else{
                 _isLive = true;
                 _canSeekAhead = false;
             }
-            _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_META_DATA, {metadata:_metadata}));
-            _model.broadcastEventExternally(ExternalEventName.ON_METADATA, _metadata);
-        }
+	    
+            	_model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_META_DATA, {metadata:_metadata}));
+            	_model.broadcastEventExternally(ExternalEventName.ON_METADATA, _metadata);
+            
+	}
         
         public function onCuePoint(pInfo:Object):void{
-            _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_CUE_POINT, {cuepoint:pInfo}));
+             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_CUE_POINT, {cuepoint:pInfo}));
         }
         
         public function onXMPData(pInfo:Object):void{
-            _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_XMP_DATA, {cuepoint:pInfo}));
+             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_XMP_DATA, {cuepoint:pInfo}));
         }
         
         public function onPlayStatus(e:Object):void{
